@@ -17,7 +17,6 @@
 
 (deftask test []
   (comp (testing)
-        (watch)
         (midje)
         (cljs/test-cljs)))
 
