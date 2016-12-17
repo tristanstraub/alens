@@ -4,23 +4,23 @@
                :cljs [cljs.core.async :as a])))
 
 (defn projector%
-  [fapply]
+  [fapply fjoin]
   (fn
-    ([x l] (fapply (l fapply) x))
-    ([x l f] (fapply (l fapply) f x))))
+    ([x l] (fapply (l fapply fjoin) x))
+    ([x l f] (fapply (l fapply fjoin) f x))))
 
 (defn projector
-  [fapply]
+  [fapply fjoin]
   (fn
-    ([x l] ((projector% fapply) x (l)))
-    ([x l f] ((projector% fapply) x (l) f))))
+    ([x l] ((projector% fapply fjoin) x (l)))
+    ([x l f] ((projector% fapply fjoin) x (l) f))))
 
 (defn composable [outer]
   (fn
     ([] outer)
     ([inner]
-     (fn [fapply]
-       (let [p (projector% fapply)]
+     (fn [fapply fjoin]
+       (let [p (projector% fapply fjoin)]
          (fn
            ([x] (-> x (p outer) (p inner)))
            ([f x] (p x outer #(p % inner f)))))))))
@@ -28,15 +28,15 @@
 (defn lift2 [l]
   (composable (fn
           ([] l)
-          ([fapply] l))))
+          ([fapply fjoin] l))))
 
 (defn id
-  ([x] x)
+;;  ([x] x)
   ([f & xs] (apply f xs)))
 
 (defn at
   ([k]
-   (composable (fn [fapply]
+   (composable (fn [fapply fjoin]
                  (fn cb
                    ([x] (get x k))
                    ([f x]
@@ -52,7 +52,7 @@
               ch))
 
 
-(defn fjoin [xs]
+(defn async-fjoin [xs]
   (a/go
     (let [xs     (loop [mxs []
                         xs  xs]
@@ -69,46 +69,43 @@
         (a/<! result)
         result))))
 
-(defn fapply
-  ([f & xs]
-   (a/go
-     (let [result (apply f (a/<! (fjoin xs)))]
-       (if (read-port? result)
-         (a/<! result)
-         result)))))
+(defn async-fapply [fjoin]
+  (fn
+    ([f & xs]
+     (a/go
+       (let [result (apply f (a/<! (fjoin xs)))]
+         (if (read-port? result)
+           (a/<! result)
+           result))))))
 
-(defn fmap [fapply]
-  (fn [f x]
-    (fapply fjoin (map #(fapply f %) x))))
+;; (defn fmap [fapply fjoin]
+;;   (fn [f x]
+;;     (fapply fjoin (map #(fapply f %) x))))
 
 (def leaves
   (composable
-   (fn [fapply]
-     (let [p (projector fapply)]
-       (fn cb
-         ([x]
-          (cond (map? x)
-                (fapply #(apply concat %) (->> (vals x)
-                                               (map #(fapply cb %))
-                                               fjoin))
-                :else
-                [x]))
-         ([f x]
-          (cond (map? x)
-                (->> x
-                     (map (fn [[k v]] [k (fapply cb f v)]))
-                     (map fjoin)
-                     fjoin
-                     (fapply into {}))
-                :else
-                (do
-                  (println :X x)
-
-                  (fapply f x)))))))))
+   (fn [fapply fjoin]
+     (fn cb
+       ([x]
+        (cond (map? x)
+              (fapply #(apply concat %) (->> (vals x)
+                                             (map #(fapply cb %))
+                                             fjoin))
+              :else
+              [x]))
+       ([f x]
+        (cond (map? x)
+              (->> x
+                   (vals)
+                   (map #(fapply cb f %))
+                   fjoin
+                   (fapply zipmap (keys x)))
+              :else
+              (fapply f x)))))))
 
 (defn fwhen [pred?]
   (composable
-   (fn [fapply]
+   (fn [fapply fjoin]
      (fn
        ([x] x)
        ([f x] (if (pred? x) (fapply f x) x))))))
