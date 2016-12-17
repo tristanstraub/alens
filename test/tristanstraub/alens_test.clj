@@ -1,7 +1,7 @@
 (ns tristanstraub.alens-test
   (:use midje.sweet)
   (:require [clojure.core.async :as a]
-            [tristanstraub.alens :refer [projector at id fapply each fwhen]]
+            [tristanstraub.alens :refer [projector at id fapply each fwhen leaves]]
             [clojure.test :as t]))
 
 (fact "Can view via 'at'"

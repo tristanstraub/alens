@@ -3,18 +3,6 @@
   (:require #?(:clj [clojure.core.async :as a]
                :cljs [cljs.core.async :as a])))
 
-(declare lens-juxt)
-
-(defn lift [l]
-  (fn
-    ([] l)
-    ([next]
-     (lens-juxt l next))))
-
-(defn lift2 [l]
-  (lift (fn
-          ([] l)
-          ([fapply] l))))
 
 (defn projector
   [fapply]
@@ -22,17 +10,23 @@
     ([x l] (fapply ((l) fapply) x))
     ([x l f] (fapply ((l) fapply) f x))))
 
-(defn lens-juxt
-  ([outer inner]
-   (fn [fapply]
-     (let [p (projector fapply)]
-       (fn
-         ([x] (-> x (p (fn [] outer)) (p (fn [] inner))))
-         ([f x]
-          (p x (fn [] outer) #(p % (fn [] inner) f)))))))
-  ([l1 l2 & more]
-   (lens-juxt (lens-juxt l1 l2)
-              (reduce lens-juxt more))))
+(defn lift [outer]
+  (fn
+    ([] outer)
+    ([inner]
+     (fn [fapply]
+       (let [p (projector fapply)]
+         (fn
+           ([x] (-> x (p (fn [] outer)) (p (fn [] inner))))
+           ([f x]
+            (p x (fn [] outer) #(p % (fn [] inner) f)))))))))
+
+(defn lift2 [l]
+  (lift (fn
+          ([] l)
+          ([fapply] l))))
+
+
 
 (defn id
   ([x] x)
