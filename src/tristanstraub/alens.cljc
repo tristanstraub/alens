@@ -3,7 +3,6 @@
   (:require #?(:clj [clojure.core.async :as a]
                :cljs [cljs.core.async :as a])))
 
-
 (defn projector%
   [fapply]
   (fn
@@ -16,7 +15,7 @@
     ([x l] ((projector% fapply) x (l)))
     ([x l f] ((projector% fapply) x (l) f))))
 
-(defn lift [outer]
+(defn composable [outer]
   (fn
     ([] outer)
     ([inner]
@@ -27,11 +26,9 @@
            ([f x] (p x outer #(p % inner f)))))))))
 
 (defn lift2 [l]
-  (lift (fn
+  (composable (fn
           ([] l)
           ([fapply] l))))
-
-
 
 (defn id
   ([x] x)
@@ -39,11 +36,11 @@
 
 (defn at
   ([k]
-   (lift (fn [fapply]
-            (fn cb
-              ([x] (get x k))
-              ([f x]
-               (fapply #(assoc %1 k %2) x (fapply f (cb x))))))))
+   (composable (fn [fapply]
+                 (fn cb
+                   ([x] (get x k))
+                   ([f x]
+                    (fapply #(assoc %1 k %2) x (fapply f (cb x))))))))
   ([k & ks]
    (if (not (empty? ks))
      (comp (at k) (apply at ks))
@@ -54,52 +51,64 @@
                  :cljs cljs.core.async.impl.protocols/ReadPort)
               ch))
 
-(defn fapply
-  ([x] (a/go (if (read-port? x)
-               (a/<! x)
-               x)))
-  ([f & xs] (a/go
-              (let [xs     (loop [mxs []
-                                  xs  xs]
-                             (if xs
-                               (let [[x & xs] xs]
-                                 (recur (conj mxs (if (read-port? x)
-                                                    (a/<! x)
-                                                    x))
-                                        xs))
-                               mxs))
-                    result (apply f xs)]
-                (if (read-port? result)
-                  (a/<! result)
-                  result)))))
 
-(def each
-  (lift2
-   (fn
-     ([x] (seq x))
-     ([f x] (map f x)))))
+(defn fjoin [xs]
+  (a/go
+    (let [xs     (loop [mxs []
+                        xs  xs]
+                   (if xs
+                     (do
+                       (let [[x & xs] xs]
+                         (recur (conj mxs (if (read-port? x)
+                                            (a/<! x)
+                                            x))
+                                xs)))
+                     mxs))
+          result xs]
+      (if (read-port? result)
+        (a/<! result)
+        result))))
+
+(defn fapply
+  ([f & xs]
+   (a/go
+     (let [result (apply f (a/<! (fjoin xs)))]
+       (if (read-port? result)
+         (a/<! result)
+         result)))))
+
+(defn fmap [fapply]
+  (fn [f x]
+    (fapply fjoin (map #(fapply f %) x))))
 
 (def leaves
-  (lift
+  (composable
    (fn [fapply]
      (let [p (projector fapply)]
        (fn cb
          ([x]
           (cond (map? x)
-                (mapcat cb (->> x (map second)))
+                (fapply #(apply concat %) (->> (vals x)
+                                               (map #(fapply cb %))
+                                               fjoin))
                 :else
                 [x]))
          ([f x]
           (cond (map? x)
                 (->> x
-                     (map (fn [[k v]] [k (p v leaves f)]))
-                     (into {}))
+                     (map (fn [[k v]] [k (fapply cb f v)]))
+                     (map fjoin)
+                     fjoin
+                     (fapply into {}))
                 :else
-                (f x))))))))
+                (do
+                  (println :X x)
+
+                  (fapply f x)))))))))
 
 (defn fwhen [pred?]
-  (lift
+  (composable
    (fn [fapply]
      (fn
        ([x] x)
-       ([f x] (if (pred? x) (f x) x))))))
+       ([f x] (if (pred? x) (fapply f x) x))))))

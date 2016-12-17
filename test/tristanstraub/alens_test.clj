@@ -76,3 +76,37 @@
         project (projector id)]
     (project m (comp leaves (fwhen number?)) inc))
   => {:a 2, :c 4, :d {:e 5, :z [1 2 3]}})
+
+(fact "Can recurse over leaves of map with chans within"
+  (let [c       (a/chan)
+        m       {:a c}
+        project (projector fapply)]
+    (a/put! c 1)
+    (a/<!! (project m leaves)))
+  => 1)
+
+(fact "Can increment leaves through channels"
+  (let [l (leaves)
+        l (l fapply)
+        c (a/chan)
+        d (a/chan)]
+    (a/put! d {:z 3})
+    (a/put! c {:y d})
+    (a/<!! (l inc {:x c})))
+  => {:x {:y {:z 4}}})
+
+(fact "Can read leaves through channel"
+  (let [l (leaves)
+        l (l fapply)
+        c (a/chan)]
+    (a/put! c 1)
+    (a/<!! (l {:x c})))
+  => [1])
+
+(fact "Can read leaves through nested channels"
+  (let [l (leaves)
+        l (l fapply)
+        c (a/chan)]
+    (a/put! c {:y 2})
+    (a/<!! (l {:x c})))
+  => [2])
