@@ -5,7 +5,6 @@
 (reset! boot-bundle/bundle-file-path "boot.bundle.edn")
 
 (set-env! :source-paths #{"src"}
-          :resource-paths #{"resources"}
           :dependencies
           (expand-keywords '[:base :testing]))
 
