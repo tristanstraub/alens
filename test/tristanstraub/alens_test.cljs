@@ -3,13 +3,13 @@
                    [cljs.core.async.macros :as a])
   (:require [cljs.test]
             [cljs.core.async :as a]
-            [alens.core :refer [at projector fapply]]))
+            [tristanstraub.alens :refer [at projector async-fapply async-fjoin]]))
 
 (deftest test-async-view
   (async done
          (a/go
            (let [c       (a/chan)
-                 project (projector fapply)]
+                 project (projector (async-fapply async-fjoin) async-fjoin)]
              (a/put! c {:y 1})
              (is (= 1 (a/<! (project {:x 1} (at :x)))))
              (done)))))
@@ -21,7 +21,7 @@
                   (let [b       (a/chan)
                         c       (a/chan)
                         d       (a/chan)
-                        project (projector fapply)]
+                        project (projector (async-fapply async-fjoin) async-fjoin)]
                     (a/put! b {:x c})
                     (a/put! c {:y d})
                     (a/put! d {:z 5})
