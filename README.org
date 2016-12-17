@@ -2,3 +2,30 @@ Lenses for core.async
 
 ;; Based on: https://gist.github.com/ctford/15df66f029f70b986121
 ;; Also found in: https://github.com/ctford/traversy
+
+Access data structures via a lens, where initial values may be core.async channels:
+
+#+BEGIN_SRC clojure
+  (let [b       (a/chan)
+        c       (a/chan)
+        d       (a/chan)
+        project (projector l/fapply)]
+    (a/put! b {:x c})
+    (a/put! c {:y d})
+    (a/put! d {:z 5})
+    (a/<!! (project b (at :x :y :z))))
+#+END_SRC
+
+
+Update data structures via a lens, where initial values may be core.async channels:
+
+#+BEGIN_SRC clojure
+  (let [b       (a/chan)
+        c       (a/chan)
+        d       (a/chan)
+        project (projector l/fapply)]
+    (a/put! b {:x c})
+    (a/put! c {:y d})
+    (a/put! d {:z 5})
+    (a/<!! (project b (at :x :y :z) inc)))
+#+END_SRC
