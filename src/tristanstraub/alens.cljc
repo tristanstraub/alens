@@ -4,22 +4,27 @@
                :cljs [cljs.core.async :as a])))
 
 
+(defn projector%
+  [fapply]
+  (fn
+    ([x l] (fapply (l fapply) x))
+    ([x l f] (fapply (l fapply) f x))))
+
 (defn projector
   [fapply]
   (fn
-    ([x l] (fapply ((l) fapply) x))
-    ([x l f] (fapply ((l) fapply) f x))))
+    ([x l] ((projector% fapply) x (l)))
+    ([x l f] ((projector% fapply) x (l) f))))
 
 (defn lift [outer]
   (fn
     ([] outer)
     ([inner]
      (fn [fapply]
-       (let [p (projector fapply)]
+       (let [p (projector% fapply)]
          (fn
-           ([x] (-> x (p (fn [] outer)) (p (fn [] inner))))
-           ([f x]
-            (p x (fn [] outer) #(p % (fn [] inner) f)))))))))
+           ([x] (-> x (p outer) (p inner)))
+           ([f x] (p x outer #(p % inner f)))))))))
 
 (defn lift2 [l]
   (lift (fn
