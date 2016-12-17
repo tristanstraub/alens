@@ -1,4 +1,4 @@
-(ns alens.core-test
+(ns tristanstraub.alens-test
   (:require-macros [cljs.test :refer [deftest testing is async]]
                    [cljs.core.async.macros :as a])
   (:require [cljs.test]

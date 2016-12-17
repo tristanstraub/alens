@@ -10,6 +10,7 @@
           (expand-keywords '[:base :testing]))
 
 (deftask testing [] (merge-env! :source-paths #{"test"}) identity)
+(deftask installing [] (merge-env! :resource-paths #{"src"}) identity)
 
 (require '[zilti.boot-midje :refer [midje]])
 (require '[crisptrutski.boot-cljs-test :as cljs])
@@ -30,6 +31,7 @@
        :license     {"MIT" "https://opensource.org/licenses/MIT"}})
 
 (deftask build []
-  (comp (pom)
+  (comp (installing)
+        (pom)
         (jar)
         (install)))

@@ -3,38 +3,51 @@
   (:require #?(:clj [clojure.core.async :as a]
                :cljs [cljs.core.async :as a])))
 
-(defn projector [fapply]
+(declare lens-juxt)
+
+(defn lift [l]
   (fn
-    ([x l] (fapply (l fapply) x))
-    ([x l f] (fapply (l fapply) f x))))
+    ([] l)
+    ([next]
+     (lens-juxt l next))))
+
+(defn lift2 [l]
+  (lift (fn
+          ([] l)
+          ([fapply] l))))
+
+(defn projector
+  [fapply]
+  (fn
+    ([x l] (fapply ((l) fapply) x))
+    ([x l f] (fapply ((l) fapply) f x))))
 
 (defn lens-juxt
   ([outer inner]
    (fn [fapply]
      (let [p (projector fapply)]
        (fn
-         ([x] (-> x (p outer) (p inner)))
+         ([x] (-> x (p (fn [] outer)) (p (fn [] inner))))
          ([f x]
-          (p x outer #(p % inner f)))))))
+          (p x (fn [] outer) #(p % (fn [] inner) f)))))))
   ([l1 l2 & more]
    (lens-juxt (lens-juxt l1 l2)
               (reduce lens-juxt more))))
 
-(defn id [fapply]
-  (fn
-    ([x] x)
-    ([f x] (fapply f x))))
+(defn id
+  ([x] x)
+  ([f & xs] (apply f xs)))
 
 (defn at
   ([k]
-   (fn [fapply]
-     (fn cb
-       ([x] (get x k))
-       ([f x]
-        (fapply #(assoc %1 k %2) x (fapply f (cb x)))))))
+   (lift (fn [fapply]
+            (fn cb
+              ([x] (get x k))
+              ([f x]
+               (fapply #(assoc %1 k %2) x (fapply f (cb x))))))))
   ([k & ks]
-   (if ks
-     (lens-juxt (at k) (apply at ks))
+   (if (not (empty? ks))
+     (comp (at k) (apply at ks))
      (at k))))
 
 (defn read-port? [ch]
@@ -60,3 +73,34 @@
                 (if (read-port? result)
                   (a/<! result)
                   result)))))
+
+(def each
+  (lift2
+   (fn
+     ([x] (seq x))
+     ([f x] (map f x)))))
+
+(def leaves
+  (lift
+   (fn [fapply]
+     (let [p (projector fapply)]
+       (fn cb
+         ([x]
+          (cond (map? x)
+                (mapcat cb (->> x (map second)))
+                :else
+                [x]))
+         ([f x]
+          (cond (map? x)
+                (->> x
+                     (map (fn [[k v]] [k (p v leaves f)]))
+                     (into {}))
+                :else
+                (f x))))))))
+
+(defn fwhen [pred?]
+  (lift
+   (fn [fapply]
+     (fn
+       ([x] x)
+       ([f x] (if (pred? x) (f x) x))))))

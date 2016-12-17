@@ -1,13 +1,13 @@
-(ns alens.core-test
+(ns tristanstraub.alens-test
   (:use midje.sweet)
   (:require [clojure.core.async :as a]
-            [alens.core :refer [projector at id fapply lens-juxt]]
+            [tristanstraub.alens :refer [projector at id fapply each fwhen]]
             [clojure.test :as t]))
 
 (fact "Can view via 'at'"
-  (let [project   (projector (id #(%1 %2)))]
+  (let [project   (projector id)]
     (project {:x {:y 2}}
-             (lens-juxt (at :x) (at :y))))
+             (at :x :y)))
   => 2)
 
 (fact "Can update via 'at'"
@@ -15,7 +15,7 @@
                  ([x] x)
                  ([f & xs] (apply f xs)))
         project   (projector fapply)]
-    (project {:x {:y 2 :z 5}} (lens-juxt (at :x) (at :y)) inc))
+    (project {:x {:y 2 :z 5}} (comp (at :x) (at :y)) inc))
   => {:x {:y 3 :z 5}})
 
 (fact "Can view async via 'at'"
@@ -37,7 +37,7 @@
   (let [c       (a/chan)
         project (projector fapply)]
     (a/put! c {:y 1})
-    (a/<!! (project {:x c} (lens-juxt (at :x) (at :y)) inc)))
+    (a/<!! (project {:x c} (comp (at :x) (at :y)) inc)))
   => {:x {:y 2}})
 
 (fact "Can update through multiple channels"
@@ -46,7 +46,7 @@
         project (projector fapply)]
     (a/put! c {:y d})
     (a/put! d {:z 5})
-    (a/<!! (project {:x c} (lens-juxt (at :x) (at :y) (at :z)) inc)))
+    (a/<!! (project {:x c} (comp (at :x) (at :y) (at :z)) inc)))
   => {:x {:y {:z 6}}})
 
 (fact "Can update through root channel"
@@ -57,10 +57,10 @@
     (a/put! b {:x c})
     (a/put! c {:y d})
     (a/put! d {:z 5})
-    (a/<!! (project b (lens-juxt (at :x) (at :y) (at :z)) inc)))
+    (a/<!! (project b (comp (at :x) (at :y) (at :z)) inc)))
  => {:x {:y {:z 6}}})
 
-(fact "'in' lens works like (lens-juxt at...)"
+(fact "'in' lens works like (comp at...)"
   (let [b (a/chan)
         c       (a/chan)
         d       (a/chan)
@@ -70,3 +70,9 @@
     (a/put! d {:z 5})
     (a/<!! (project b (at :x :y :z) inc)))
   => {:x {:y {:z 6}}})
+
+(fact "Can recurse over leaves of map"
+  (let [m       {:a 1 :c 3 :d {:e 4 :z [1 2 3]}}
+        project (projector id)]
+    (project m (comp leaves (fwhen number?)) inc))
+  => {:a 2, :c 4, :d {:e 5, :z [1 2 3]}})
