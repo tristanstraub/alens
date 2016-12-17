@@ -1,5 +1,7 @@
 (ns alens.core
-  (:require [clojure.core.async :as a]))
+  #?(:cljs (:require-macros [cljs.core.async.macros :as a]))
+  (:require #?(:clj [clojure.core.async :as a]
+               :cljs [cljs.core.async :as a])))
 
 (defn projector [fapply]
   (fn

@@ -5,4 +5,5 @@
 
  :testing [[midje "1.8.3" :scope "test"]
            [zilti/boot-midje "0.2.2-SNAPSHOT" :scope "test"]
-           [adzerk/boot-test "1.1.2" :scope "test"]]}
+           [adzerk/boot-test "1.1.2" :scope "test"]
+           [crisptrutski/boot-cljs-test "0.3.0" :scope "test"]]}

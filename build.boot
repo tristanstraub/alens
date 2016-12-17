@@ -4,14 +4,18 @@
 
 (reset! boot-bundle/bundle-file-path "boot.bundle.edn")
 
-(set-env! :source-paths #{"src" "test"}
+(set-env! :source-paths #{"src"}
           :resource-paths #{"resources"}
-          :test-paths #{"test"}
           :dependencies
           (expand-keywords '[:base :testing]))
 
+(deftask testing [] (merge-env! :source-paths #{"test"}) identity)
+
 (require '[zilti.boot-midje :refer [midje]])
+(require '[crisptrutski.boot-cljs-test :as cljs])
 
 (deftask test []
-  (comp (watch)
-        (midje)))
+  (comp (testing)
+        (watch)
+        (midje)
+        (cljs/test-cljs)))
