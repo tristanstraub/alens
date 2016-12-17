@@ -19,3 +19,17 @@
         (watch)
         (midje)
         (cljs/test-cljs)))
+
+(def +version+ "0.1.0-SNAPSHOT")
+
+(task-options!
+  pom {:project     'tristanstraub/alens
+       :version     +version+
+       :description "Lenses that work with core.async."
+       :url         "https://github.com/tristanstraub/alens"
+       :license     {"MIT" "https://opensource.org/licenses/MIT"}})
+
+(deftask build []
+  (comp (pom)
+        (jar)
+        (install)))

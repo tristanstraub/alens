@@ -1,4 +1,4 @@
-(ns alens.core
+(ns tristanstraub.alens
   #?(:cljs (:require-macros [cljs.core.async.macros :as a]))
   (:require #?(:clj [clojure.core.async :as a]
                :cljs [cljs.core.async :as a])))
