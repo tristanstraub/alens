@@ -1,0 +1,8 @@
+{:clojure [[org.clojure/clojure "1.8.0"]]
+
+ :base    [:clojure
+           [org.clojure/core.async "0.2.395"]]
+
+ :testing [[midje "1.8.3" :scope "test"]
+           [zilti/boot-midje "0.2.2-SNAPSHOT" :scope "test"]
+           [adzerk/boot-test "1.1.2" :scope "test"]]}
