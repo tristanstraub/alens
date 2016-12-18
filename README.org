@@ -5,11 +5,6 @@ Lenses for core.async
 ;; Based on: https://gist.github.com/ctford/15df66f029f70b986121
 ;; Also found in: https://github.com/ctford/traversy
 
-Access data structures via a lens, where initial values may be core.async channels:
-
-#+BEGIN_SRC clojure
-#+END_SRC
-
 Update data structures via a lens, where initial values may be core.async channels:
 
 #+BEGIN_SRC clojure
