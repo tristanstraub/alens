@@ -8,26 +8,29 @@ Lenses for core.async
 Access data structures via a lens, where initial values may be core.async channels:
 
 #+BEGIN_SRC clojure
-  (let [b       (a/chan)
-        c       (a/chan)
-        d       (a/chan)
-        project (projector l/fapply)]
-    (a/put! b {:x c})
-    (a/put! c {:y d})
-    (a/put! d {:z 5})
-    (a/<!! (project b (at :x :y :z))))
 #+END_SRC
-
 
 Update data structures via a lens, where initial values may be core.async channels:
 
 #+BEGIN_SRC clojure
-  (let [b       (a/chan)
-        c       (a/chan)
-        d       (a/chan)
-        project (projector l/fapply)]
-    (a/put! b {:x c})
-    (a/put! c {:y d})
-    (a/put! d {:z 5})
-    (a/<!! (project b (at :x :y :z) inc)))
+  (fact "Can recurse update over leaves of map"
+    (let [m       {:a 1 :c 3 :d {:e 4 :z [1 2 3]}}]
+      (project m (comp leaves (fwhen number?)) inc))
+    => {:a 2, :c 4, :d {:e 5, :z [1 2 3]}})
+#+END_SRC
+
+#+BEGIN_SRC clojure
+  (fact "Can update and read through root channel"
+    (let [b (a/chan)
+          c (a/chan)
+          d (a/chan)]
+      (a/put! b {:x {:y 3} :z c})
+      (a/put! c {:k d})
+      (a/put! d {:l 5})
+      (-> b
+          (project-async (comp (at :x) leaves) inc)
+          a/<!!
+          (project-async (comp (at :z :k)))
+          a/<!!))
+   => {:l 5})
 #+END_SRC
