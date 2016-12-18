@@ -109,3 +109,6 @@
      (fn
        ([x] x)
        ([f x] (if (pred? x) (fapply f x) x))))))
+
+(def project (projector id seq))
+(def project-async (projector (async-fapply async-fjoin) async-fjoin))
