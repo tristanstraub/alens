@@ -2,9 +2,6 @@ Lenses for core.async
 
 #+HTML: <img src="https://travis-ci.org/tristanstraub/alens.svg?branch=master" alt="build:">
 
-;; Based on: https://gist.github.com/ctford/15df66f029f70b986121
-;; Also found in: https://github.com/ctford/traversy
-
 Update data structures via a lens, where initial values may be core.async channels:
 
 #+BEGIN_SRC clojure
@@ -29,3 +26,8 @@ Update data structures via a lens, where initial values may be core.async channe
           a/<!!))
    => {:l 5})
 #+END_SRC
+
+* Thanks
+
+Based on: https://gist.github.com/ctford/15df66f029f70b986121
+Also found in: https://github.com/ctford/traversy
