@@ -12,13 +12,12 @@
 (deftask installing [] (merge-env! :resource-paths #{"src"}) identity)
 
 (require '[zilti.boot-midje :refer [midje]])
-;;(require '[crisptrutski.boot-cljs-test :as cljs])
+(require '[crisptrutski.boot-cljs-test :as cljs])
 
 (deftask test []
   (comp (testing)
         (midje)
-        ;;(cljs/test-cljs)
-        ))
+        (cljs/test-cljs)))
 
 (def +version+ "0.1.0-SNAPSHOT")
 
